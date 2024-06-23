@@ -1,3 +1,5 @@
+namespace Commands;
+
 enum EngineType
 {
     NotSet = 0,

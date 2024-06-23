@@ -13,8 +13,17 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
 
     public Task<Saldo> ExecuteAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("Engine: Paralela.");
-        return Task.FromResult(new Saldo(periodo!, 0, 0, new List<Nf>()));
+        // Validar se posso rodas
+
+        // 1. Carregar BOMs
+        // 2. Carregar Notas de Vendas
+        // 3. Consolidar listas de insumos e saldos requeridos
+        // 4. Carregar NFs e desprezar NFs não relevantes
+        // 5. Ordenar NFs
+        // 6. Calcular consumo até atingir saldo...
+        // 7. Retornar NFs utilizadas por Insumo
+        
+        return Task.FromResult(new Saldo(periodo!, 0, 0, 0, 0, 0, new Dictionary<Insumo, IList<Nf>>()));
     }
 
     public ConsumoDeSaldoService WithBoms(IEnumerable<Bom> boms)
