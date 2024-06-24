@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Core.IO;
 
-public class DocumentReader<TResult> : IEnumerable<TResult>
+public class DocumentReader<TResult> : IEnumerable<TResult>, IReadOnlyCollection<TResult>
 {
     private static JsonSerializerOptions options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     private readonly IEnumerable<string> files;
@@ -18,6 +18,11 @@ public class DocumentReader<TResult> : IEnumerable<TResult>
 
         files = Directory.EnumerateFiles(path, "*.json", SearchOption.AllDirectories);
     }
+
+    public int Count => files.Count();
+
+    public long LongCount => files.LongCount();
+
 
     public IEnumerator<TResult> GetEnumerator()
     {

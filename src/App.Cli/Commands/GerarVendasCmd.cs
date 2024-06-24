@@ -72,7 +72,7 @@ public class GerarVendasCmd : Command
                             bom.Uf,
                             f.Address.StateAbbr(),
                             f.Date.Between(new DateTime(periodo.Ano, periodo.Mes, 1), new DateTime(periodo.Ano, periodo.Mes, 1).AddMonths(1).AddDays(-1)),
-                            new List<NfItem>() { new(1, f.Commerce.Ean13(), bom.Produto.ToString(), f.Random.Int(1, 100), custoProduto * f.Random.Decimal(1.2M, 2.5M)) }));
+                            new List<NfItem>() { new(1, bom.Produto.Codigo.ToString(), bom.Produto.ToString(), f.Random.Int(1, 100), custoProduto * f.Random.Decimal(1.2M, 2.5M)) }));
 
                     var comprasFaker = new Faker<Nf>(fakerLocale)
                         .CustomInstantiator(f => new Nf(

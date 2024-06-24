@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Diagnostics;
 using System.Globalization;
 using Core.IO;
 using Core.Nfs;
@@ -91,21 +92,25 @@ public class CalcularSaldoCmd : Command
                 var comprasReader = new DocumentReader<Nf>(comprasSrcDir.FullName);
 
                 spinner.Status("Calculando saldo...");
+                var stopWatch = Stopwatch.StartNew();
                 var result = await svc
                     .WithBoms(bomReader)
                     .WithVendas(vendasReader)
                     .WithCompras(comprasReader)
                     .WithPeriodo(Periodo.Parse(periodo))
                     .ExecuteAsync(context.GetCancellationToken());
+                
+                stopWatch.Stop();
 
                 // Print Result
                 var table = new Table();
                 table.AddColumn("Período");
                 table.AddColumn("Saldo Requerido");
                 table.AddColumn("Saldo Consumido");
-                table.AddColumn("Total NFs Processadas");
-                table.AddColumn("Total NFs Utilizadas");
-                table.AddColumn("Total Insumos");
+                table.AddColumn("NFs Processadas");
+                table.AddColumn("NFs Utilizadas");
+                table.AddColumn("Insumos");
+                table.AddColumn("Time");
 
                 table.AddRow(
                     $"{result.Periodo.Mes.ToString("D2")}/{result.Periodo.Ano} {result.Periodo.Apuracao} dias.",
@@ -113,7 +118,8 @@ public class CalcularSaldoCmd : Command
                     result.Consumido.ToString("C2", CultureInfo.CreateSpecificCulture("pt-BR")),
                     result.TotalNfsProcessadas.ToString("N", CultureInfo.CreateSpecificCulture("pt-BR")),
                     result.TotalNfsUtilizadas.ToString("N", CultureInfo.CreateSpecificCulture("pt-BR")),
-                    result.TotalInsumos.ToString("N", CultureInfo.CreateSpecificCulture("pr-BR")));
+                    result.TotalInsumos.ToString("N", CultureInfo.CreateSpecificCulture("pr-BR")),
+                    stopWatch.Elapsed.ToString());
 
                 AnsiConsole.Write(table);
             }
