@@ -7,6 +7,7 @@ using Core.Nfs;
 using Core.Operacoes;
 using Core.Produtos;
 using Core.Regimes;
+using Microsoft.VisualBasic;
 using Spectre.Console;
 
 namespace Commands;
@@ -94,13 +95,14 @@ public class CalcularSaldoCmd : Command
                 var comprasReader = new DocumentReader<Nf>(comprasSrcDir.FullName);
 
                 spinner.Status("Calculando saldo...");
+                var steps = new List<(string Step, TimeSpan Time)>();
                 var stopWatch = Stopwatch.StartNew();
                 var result = await svc
                     .WithBoms(bomReader)
                     .WithVendas(vendasReader)
                     .WithCompras(comprasReader)
                     .WithPeriodo(Periodo.Parse(periodo))
-                    .ExecuteAsync(context.GetCancellationToken());
+                    .ExecuteAsync(context.GetCancellationToken(), steps);
                 
                 stopWatch.Stop();
 
@@ -123,7 +125,17 @@ public class CalcularSaldoCmd : Command
                     result.TotalInsumos.ToString("N", CultureInfo.CreateSpecificCulture("pr-BR")),
                     stopWatch.Elapsed.ToString());
 
+                var stepsTable = new Table();
+                stepsTable.AddColumn("Step");
+                stepsTable.AddColumn("Elapsed");
+                foreach (var step in steps)
+                {
+                    stepsTable.AddRow(step.Step, step.Time.ToString());
+                }
+
                 AnsiConsole.Write(table);
+                AnsiConsole.WriteLine();
+                AnsiConsole.Write(stepsTable);
             }
             catch (Exception ex)
             {

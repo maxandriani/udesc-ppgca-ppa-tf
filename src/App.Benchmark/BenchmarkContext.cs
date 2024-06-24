@@ -5,6 +5,8 @@ using Core.Operacoes;
 using Core.Produtos;
 using Core.Regimes;
 
+[MemoryDiagnoser]
+[ThreadingDiagnoser]
 public class BenchmarkContext
 {
     public DocumentReader<Bom>? bomReader;

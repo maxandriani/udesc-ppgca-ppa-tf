@@ -23,14 +23,17 @@ public class DocumentReader<TResult> : IEnumerable<TResult>, IReadOnlyCollection
 
     public long LongCount => files.LongCount();
 
+    public ParallelQuery<TResult> AsParallel() => files.AsParallel().Select(ParseFile);
+
+    private static TResult ParseFile(string path) => JsonSerializer.Deserialize<TResult>(
+        File.ReadAllBytes(path),
+        options) ?? throw new JsonException($"Was not possible to deserialize the file {path}");
 
     public IEnumerator<TResult> GetEnumerator()
     {
         foreach(var file in files)
         {
-            yield return JsonSerializer.Deserialize<TResult>(
-                File.ReadAllBytes(file),
-                options) ?? throw new JsonException($"Was not possible to deserialize the file {file}");
+            yield return ParseFile(file);
         }
     }
 

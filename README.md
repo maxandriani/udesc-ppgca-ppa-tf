@@ -14,19 +14,28 @@ Esse processo é a base de cálculo de consumo de estoque da maioria dos sistema
 ## Get Started
 
 ``` bash
-dotnet run -- \
-    --engine Sequential \
-    --boms-src-dir ./ \
-    --vendas-src-dir ./ \
-    --compras-src-dir ./ \
-    --periodo 01/2024/30 
+dotnet run --project ./src/App.Cli -- gerar bom 10 --output-dir ./inputs
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/1.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/2.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/3.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/4.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/5.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/6.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/7.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/8.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/9.json
+dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs --periodo 06/2024/365 --bom ./inputs/boms/10.json
+
 ```
 
 ``` bash
-dotnet run -- \
-    --engine Parallel \
-    --boms-src-dir ./ \
-    --vendas-src-dir ./ \
-    --compras-src-dir ./ \
-    --periodo 01/2024/30 
+dotnet run --project ./src/App.Cli -- calcular --boms-src-dir ./inputs/boms --compras-src-dir ./inputs/compras --vendas-src-dir ./inputs/vendas --periodo 06/2024/365 --engine Sequential
+```
+
+``` bash
+dotnet run --project ./src/App.Cli -- calcular --boms-src-dir ./inputs/boms --compras-src-dir ./inputs/compras --vendas-src-dir ./inputs/vendas --periodo 06/2024/365 --engine Parallel
+```
+
+``` bash
+sudo dotnet run -c release --project ./src/App.Benchmark -- --envVars INPUTS:/Users/maxandriani/Projects/udesc-ppgca-ppa-tf/inputs
 ```

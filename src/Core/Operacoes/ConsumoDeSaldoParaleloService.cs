@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using Core.IO;
 using Core.Nfs;
 using Core.Produtos;
 using Core.Regimes;
@@ -8,12 +10,14 @@ namespace Core.Operacoes;
 public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
 {
     private Periodo? periodo = null;
-    private IEnumerable<Bom>? bomsReader = null;
-    private IEnumerable<Nf>? vendasReader = null;
-    private IEnumerable<Nf>? comprasReader = null;
+    private DocumentReader<Bom>? bomsReader = null;
+    private DocumentReader<Nf>? vendasReader = null;
+    private DocumentReader<Nf>? comprasReader = null;
 
-    public Task<Saldo> ExecuteAsync(CancellationToken cancellationToken)
+    public Task<Saldo> ExecuteAsync(CancellationToken cancellationToken, IList<(string Step, TimeSpan Time)>? timeCounter = null)
     {
+        var stopWatch = Stopwatch.StartNew();
+        
         // Validar se posso rodas
         if (periodo is null) throw new ArgumentNullException(nameof(periodo), "Período é um campo requerido para o processamento.");
         if (bomsReader is null || bomsReader.Any() is false) throw new ArgumentNullException(nameof(bomsReader), "Boms é um campo requerido para o processamento.");
@@ -26,7 +30,8 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
         cancellationToken.ThrowIfCancellationRequested();
         var boms = bomsReader
             .AsParallel()
-            .ToDictionary(bom => bom.Produto.Codigo);                                    
+            .ToDictionary(bom => bom.Produto.Codigo); 
+        timeCounter?.Add(("1. Carregar BOMs.", stopWatch.Elapsed));
 
         // 2. Carregar Notas de Vendas e extrair os itens consumidos com seus saldos.
         cancellationToken.ThrowIfCancellationRequested();
@@ -34,7 +39,9 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
             .AsParallel()
             .SelectMany(nf => nf.Items) // log(xˆ2)
             .Select(nfItem => new { CodigoProduto = nfItem.SerialNumber, nfItem.Quantidade })
-            .GroupBy(p => p.CodigoProduto); // Esse GroupBy materializa a porra toda na memória...
+            .GroupBy(p => p.CodigoProduto)
+            .ToList(); // Esse GroupBy materializa a porra toda na memória...
+        timeCounter?.Add(("2. Carregar Notas de Vendas e extrair os itens consumidos com seus saldos.", stopWatch.Elapsed));
 
         // 3. Consolidar listas de insumos e saldos requeridos
         // Eu não tenho como adivinhar quantos insumos vou precisar, mas posso apostar no máximo com base nas BOMs que conheco.
@@ -59,17 +66,19 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
                 }
             }
         });
+        timeCounter?.Add(("3. Consolidar listas de insumos e saldos requeridos.", stopWatch.Elapsed));
 
         // 4. Carregar NFs e desprezar NFs não relevantes
         // 5. Ordenar NFs
         cancellationToken.ThrowIfCancellationRequested();
-        var totalCompras = comprasReader.LongCount();
-        var nfsCompras = comprasReader
+        var orderedNfCompras = comprasReader
             .AsParallel()
             .Where(p => p.Items.Any(i => insumosRequeridos.ContainsKey(long.Parse(i.SerialNumber)))) // Isso é rápido
             .OrderBy(p => p.Emissao)
             .SelectMany(nf => nf.Items.Select(item => new { Nf = nf, Item = item }))
             .ToList();
+        timeCounter?.Add(("4. Carregar NFs e desprezar NFs não relevantes.", stopWatch.Elapsed));
+        timeCounter?.Add(("5. Ordenar NFs.", stopWatch.Elapsed));
 
         // 6. Calcular consumo até atingir saldo...
         // 7. Retornar NFs utilizadas por Insumo
@@ -86,10 +95,10 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
             long totalNfsUtilizadas = 0;
             decimal saldoConsumido = 0;
             var insumosParticionados = new Dictionary<long, decimal>(insumos);
-            foreach(var nfCompra in nfsCompras.Where(nf => insumosParticionados.ContainsKey(long.Parse(nf.Item.SerialNumber))))
+            foreach(var nfCompra in orderedNfCompras.Where(nf => insumosParticionados.ContainsKey(long.Parse(nf.Item.SerialNumber))))
             {
                 var key = long.Parse(nfCompra.Item.SerialNumber);
-                if (!insumosParticionados.ContainsKey(key) || insumosParticionados[key] < 0)
+                if (insumosParticionados[key] < 0)
                 {
                     return;
                 }
@@ -108,6 +117,7 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
             totalNfUtilizadasBag.Add(totalNfsUtilizadas);
             saldoConsumidoBag.Add(saldoConsumido);
         });
+        timeCounter?.Add(("6. Calcular consumo até atingir saldo.", stopWatch.Elapsed));
 
         cancellationToken.ThrowIfCancellationRequested();
         var insumos = boms.Values
@@ -116,29 +126,31 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
             .Where(insumo => nfsConsumidasPorInsumo.ContainsKey(insumo.Produto.Codigo))
             .ToDictionary(p => p.Produto.Codigo);
 
+        timeCounter?.Add(("7. Retornar NFs utilizadas por Insumo.", stopWatch.Elapsed));
+
         return Task.FromResult(new Saldo(
             periodo!,
             saldoRequerido,
             saldoConsumidoBag.Sum(),
-            totalCompras,
+            orderedNfCompras.Select(x => x.Nf).Distinct().LongCount(),
             totalNfUtilizadasBag.Sum(),
             insumosRequeridos.Count,
             new Dictionary<Insumo, IList<Nf>>(nfsConsumidasPorInsumo.Select(kvp => KeyValuePair.Create(insumos[kvp.Key], kvp.Value)))));
     }
 
-    public ConsumoDeSaldoService WithBoms(IEnumerable<Bom> boms)
+    public ConsumoDeSaldoService WithBoms(DocumentReader<Bom> boms)
     {
         bomsReader = boms;
         return this;
     }
 
-    public ConsumoDeSaldoService WithCompras(IEnumerable<Nf> nfs)
+    public ConsumoDeSaldoService WithCompras(DocumentReader<Nf> nfs)
     {
         comprasReader = nfs;
         return this;
     }
 
-    public ConsumoDeSaldoService WithVendas(IEnumerable<Nf> nfs)
+    public ConsumoDeSaldoService WithVendas(DocumentReader<Nf> nfs)
     {
         vendasReader = nfs;
         return this;
