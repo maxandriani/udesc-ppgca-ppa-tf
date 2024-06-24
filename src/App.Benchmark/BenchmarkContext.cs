@@ -15,7 +15,7 @@ public class BenchmarkContext
     [GlobalSetup]
     public void Setup()
     {
-        var basePath = Path.GetFullPath(Environment.GetEnvironmentVariable("INPUT_DIR") ?? Path.Combine(Environment.CurrentDirectory, "inputs"));
+        var basePath = Path.GetFullPath(Environment.GetEnvironmentVariable("INPUTS") ?? string.Empty);
         bomReader = new(Path.Combine(basePath, "boms"));
         vendasReader = new(Path.Combine(basePath, "vendas"));
         comprasReader = new(Path.Combine(basePath, "compras"));

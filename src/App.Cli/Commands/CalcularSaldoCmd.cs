@@ -78,9 +78,11 @@ public class CalcularSaldoCmd : Command
                 switch (engine)
                 {
                     case EngineType.Sequential:
+                        AnsiConsole.WriteLine("Engine: Sequential.");
                         svc = new ConsumoDeSaldoSequencialService();
                         break;
                     case EngineType.Parallel:
+                        AnsiConsole.WriteLine("Engine: Parallel.");
                         svc = new ConsumoDeSaldoParaleloService();
                         break;
                     default:

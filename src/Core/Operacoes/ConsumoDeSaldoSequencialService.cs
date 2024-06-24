@@ -34,7 +34,7 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
             .GroupBy(p => p.CodigoProduto); // Esse GroupBy materializa a porra toda na memória...
 
         // 3. Consolidar listas de insumos e saldos requeridos
-        var insumosRequeridos = new Dictionary<long, decimal>();
+        var insumosRequeridos = new Dictionary<long, decimal>(boms.Values.Select(b => b.Insumos.Count()).Sum());
 
         foreach(var produtos in produtosVendidos)
         {
@@ -70,7 +70,7 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
         decimal saldoRequerido = insumosRequeridos.Values.Sum();
         decimal saldoConsumido = 0;
         long TotalNfsUtilizadas = 0;
-        var nfsConsumidasPorInsumo = new Dictionary<long, IList<Nf>>();
+        var nfsConsumidasPorInsumo = new Dictionary<long, IList<Nf>>(insumosRequeridos.Count);
 
         foreach (var nfCompra in nfsCompras.SelectMany(nf => nf.Items.Select(item => new { Nf = nf, Item = item })))
         {

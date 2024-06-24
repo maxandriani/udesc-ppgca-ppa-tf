@@ -2,3 +2,4 @@ bin
 obj
 inputs
 .DS_Store
+BenchmarkDotNet.Artifacts
