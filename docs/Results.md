@@ -2,7 +2,7 @@
 
 Para este exercício utilizou-se um problema hipotético de consumo de saldo de um estoque de insumos com base em um conjunto de notas fiscais de venda e um documento de detalhamento técnico de engenharia (Bills of Material). Em resumo, com base nas notas fiscais de vendas são estabelecidos os produtos vendidos no mês e suas respectivas quantidades. Depois consulta-se a relação de BOMs para computar a lista consolidade de insumos requeridos para fabricação dos produtos (Saldo Requerido). Por fim, são processadas as notas fiscais de compras dentro do período fiscal a fim de discriminar quais notas atendem o consumo de determinado produto vendido. As notas fiscais de compra devem ser consumidas na sequência em que foram emitidas, First In, First Out.
 
-## Algorítimo
+## Algoritmo
 
 Foram elencadas sete etapas para correta execução deste algorítimo, sendo elas:
 
