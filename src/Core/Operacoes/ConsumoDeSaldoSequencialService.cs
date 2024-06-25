@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using Core.IO;
 using Core.Nfs;
 using Core.Produtos;
@@ -17,7 +16,7 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
     public Task<Saldo> ExecuteAsync(CancellationToken cancellationToken, IList<(string Step, TimeSpan Time)>? timeCounter = null)
     {
         var stopWatch = Stopwatch.StartNew();
-        // Validar se posso rodas
+        
         if (periodo is null) throw new ArgumentNullException(nameof(periodo), "Período é um campo requerido para o processamento.");
         if (bomsReader is null || bomsReader.Any() is false) throw new ArgumentNullException(nameof(bomsReader), "Boms é um campo requerido para o processamento.");
         if (vendasReader is null || vendasReader.Any() is false) throw new ArgumentNullException(nameof(vendasReader), "NFs de vendas são requeridas para o processamento.");
@@ -35,7 +34,7 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
         var produtosVendidos = vendasReader
             .SelectMany(nf => nf.Items) // log(xˆ2)
             .Select(nfItem => new { CodigoProduto = nfItem.SerialNumber, nfItem.Quantidade })
-            .GroupBy(p => p.CodigoProduto) // Esse GroupBy materializa a porra toda na memória...
+            .GroupBy(p => p.CodigoProduto)
             .ToList(); // Pre carregando em memória pra contar o tempo.
         timeCounter?.Add(("2. Carregar Notas de Vendas e extrair os itens consumidos com seus saldos.", stopWatch.Elapsed));
 
@@ -44,6 +43,7 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
 
         foreach(var produtos in produtosVendidos)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var key = long.Parse(produtos.Key);
             var quantidadeVendida = produtos.Sum(p => p.Quantidade);
             if (!boms.ContainsKey(key)) throw new Exception($"Não foi encontrada BOM para o produto {produtos.Key}.");
@@ -75,7 +75,6 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
         timeCounter?.Add(("5. Ordenar NFs.", stopWatch.Elapsed));
 
         // 6. Calcular consumo até atingir saldo.
-        cancellationToken.ThrowIfCancellationRequested();
         decimal saldoRequerido = insumosRequeridos.Values.Sum();
         decimal saldoConsumido = 0;
         long TotalNfsUtilizadas = 0;
@@ -83,6 +82,7 @@ public class ConsumoDeSaldoSequencialService : ConsumoDeSaldoService
 
         foreach (var nfCompra in orderedNfCompras)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var key = long.Parse(nfCompra.Item.SerialNumber);
             if (!insumosRequeridos.ContainsKey(key) || insumosRequeridos[key] < 0)
             {

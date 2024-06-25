@@ -11,6 +11,10 @@ Esse processo é a base de cálculo de consumo de estoque da maioria dos sistema
 3. São alimentadas todas as notas de compra de insumos de um período de tempo (30 dias até 2 anos, dependendo do regime).
 4. Cada produto vendido, precisa consumir seu saldo da nota de compra mais velha, o resultado do cálculo é a lista de notas consumidas, além do total em quantidade e valor.
 
+## Resultados
+
+[Consulte os resultados dos modelos](./docs/Results.md)
+
 ## Get Started
 
 ``` bash
@@ -29,11 +33,11 @@ dotnet run --project ./src/App.Cli -- gerar vendas 10000 --output-dir ./inputs -
 ```
 
 ``` bash
-dotnet run --project ./src/App.Cli -- calcular --boms-src-dir ./inputs/boms --compras-src-dir ./inputs/compras --vendas-src-dir ./inputs/vendas --periodo 06/2024/365 --engine Sequential
+dotnet run -c release --project ./src/App.Cli -- calcular --boms-src-dir ./inputs/boms --compras-src-dir ./inputs/compras --vendas-src-dir ./inputs/vendas --periodo 06/2024/365 --engine Sequential
 ```
 
 ``` bash
-dotnet run --project ./src/App.Cli -- calcular --boms-src-dir ./inputs/boms --compras-src-dir ./inputs/compras --vendas-src-dir ./inputs/vendas --periodo 06/2024/365 --engine Parallel
+dotnet run -c release --project ./src/App.Cli -- calcular --boms-src-dir ./inputs/boms --compras-src-dir ./inputs/compras --vendas-src-dir ./inputs/vendas --periodo 06/2024/365 --engine Parallel
 ```
 
 ``` bash

@@ -40,15 +40,18 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
             .SelectMany(nf => nf.Items) // log(xˆ2)
             .Select(nfItem => new { CodigoProduto = nfItem.SerialNumber, nfItem.Quantidade })
             .GroupBy(p => p.CodigoProduto)
-            .ToList(); // Esse GroupBy materializa a porra toda na memória...
+            .ToList();
         timeCounter?.Add(("2. Carregar Notas de Vendas e extrair os itens consumidos com seus saldos.", stopWatch.Elapsed));
 
         // 3. Consolidar listas de insumos e saldos requeridos
         // Eu não tenho como adivinhar quantos insumos vou precisar, mas posso apostar no máximo com base nas BOMs que conheco.
-        var insumosRequeridos = new ConcurrentDictionary<long, decimal>(Environment.ProcessorCount, boms.Values.Select(b => b.Insumos.Count()).Sum());
+        var insumosRequeridos = new ConcurrentDictionary<long, decimal>(
+            Environment.ProcessorCount,
+            boms.Values.Select(b => b.Insumos.Count()).Sum());
 
         Parallel.ForEach(produtosVendidos, (produtos) => // Equivalente ao openmp for
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var key = long.Parse(produtos.Key);
             var quantidadeVendida = produtos.Sum(p => p.Quantidade);
             if (!boms.ContainsKey(key)) throw new Exception($"Não foi encontrada BOM para o produto {produtos.Key}.");
@@ -81,7 +84,6 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
         timeCounter?.Add(("5. Ordenar NFs.", stopWatch.Elapsed));
 
         // 6. Calcular consumo até atingir saldo...
-        // 7. Retornar NFs utilizadas por Insumo
         cancellationToken.ThrowIfCancellationRequested();
         decimal saldoRequerido = insumosRequeridos.Values.Sum();
         //decimal saldoConsumido = 0;
@@ -97,6 +99,7 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
             var insumosParticionados = new Dictionary<long, decimal>(insumos);
             foreach(var nfCompra in orderedNfCompras.Where(nf => insumosParticionados.ContainsKey(long.Parse(nf.Item.SerialNumber))))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var key = long.Parse(nfCompra.Item.SerialNumber);
                 if (insumosParticionados[key] < 0)
                 {
@@ -119,6 +122,7 @@ public class ConsumoDeSaldoParaleloService : ConsumoDeSaldoService
         });
         timeCounter?.Add(("6. Calcular consumo até atingir saldo.", stopWatch.Elapsed));
 
+        // 7. Retornar NFs utilizadas por Insumo
         cancellationToken.ThrowIfCancellationRequested();
         var insumos = boms.Values
             .AsParallel()
